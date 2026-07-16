@@ -1,101 +1,93 @@
+'use strict';
+
 import flatpickr from 'flatpickr';
-import 'flatpickr/dist/flatpickr.min.css';
 import iziToast from 'izitoast';
+import 'flatpickr/dist/flatpickr.min.css';
 import 'izitoast/dist/css/iziToast.min.css';
 
-// Get DOM elements
-const datetimePickerInput = document.getElementById('datetime-picker');
-const startBtn = document.querySelector('[data-start]');
-const daysDisplay = document.querySelector('[data-days]');
-const hoursDisplay = document.querySelector('[data-hours]');
-const minutesDisplay = document.querySelector('[data-minutes]');
-const secondsDisplay = document.querySelector('[data-seconds]');
+const input = document.querySelector('#datetime-picker'),
+  btn = document.querySelector('button[data-start]'),
+  days = document.querySelector('span[data-days]'),
+  hours = document.querySelector('span[data-hours]'),
+  minutes = document.querySelector('span[data-minutes]'),
+  seconds = document.querySelector('span[data-seconds]'),
+  values = document.querySelectorAll('.value');
 
-// State
+btn.disabled = true;
 let userSelectedDate = null;
-let timerInterval = null;
+btn.addEventListener('click', setTime);
 
-// Helper function to add leading zeros
-function addLeadingZero(value) {
-  return String(value).padStart(2, '0');
-}
-
-// Convert milliseconds to time components
-function convertMs(ms) {
-  const second = 1000;
-  const minute = second * 60;
-  const hour = minute * 60;
-  const day = hour * 24;
-
-  const days = Math.floor(ms / day);
-  const hours = Math.floor((ms % day) / hour);
-  const minutes = Math.floor(((ms % day) % hour) / minute);
-  const seconds = Math.floor((((ms % day) % hour) % minute) / second);
-
-  return { days, hours, minutes, seconds };
-}
-
-// Update timer display
-function updateTimerDisplay(ms) {
-  const { days, hours, minutes, seconds } = convertMs(ms);
-
-  daysDisplay.textContent = addLeadingZero(days);
-  hoursDisplay.textContent = addLeadingZero(hours);
-  minutesDisplay.textContent = addLeadingZero(minutes);
-  secondsDisplay.textContent = addLeadingZero(seconds);
-}
-
-// Initialize flatpickr
 const options = {
   enableTime: true,
   time_24hr: true,
   defaultDate: new Date(),
   minuteIncrement: 1,
   onClose(selectedDates) {
-    const selectedDate = selectedDates[0];
+    const selectedDate = selectedDates[0].getTime();
 
-    // Check if date is in the past
-    if (selectedDate.getTime() < new Date().getTime()) {
-      iziToast.error({
-        title: 'Error',
+    if (selectedDate <= Date.now()) {
+      btn.disabled = true;
+      iziToast.show({
         message: 'Please choose a date in the future',
+        messageSize: '16px',
+        position: 'topRight',
+        transitionIn: 'ease',
+        transitionOut: 'ease',
+        backgroundColor: '#EF4040',
+        close: true,
+        messageColor: '#fff',
       });
-      startBtn.disabled = true;
-      userSelectedDate = null;
       return;
     }
 
-    // Valid future date
+    btn.disabled = false;
     userSelectedDate = selectedDate;
-    startBtn.disabled = false;
   },
 };
 
-flatpickr(datetimePickerInput, options);
+flatpickr(input, options);
 
-// Start button click handler
-startBtn.addEventListener('click', () => {
-  if (!userSelectedDate) return;
+function convertMs(ms) {
+  // Number of milliseconds per unit of time
+  const second = 1000;
+  const minute = second * 60;
+  const hour = minute * 60;
+  const day = hour * 24;
 
-  // Disable input and button
-  datetimePickerInput.disabled = true;
-  startBtn.disabled = true;
+  // Remaining days
+  const days = Math.floor(ms / day);
+  // Remaining hours
+  const hours = Math.floor((ms % day) / hour);
+  // Remaining minutes
+  const minutes = Math.floor(((ms % day) % hour) / minute);
+  // Remaining seconds
+  const seconds = Math.floor((((ms % day) % hour) % minute) / second);
 
-  // Update display immediately
-  const initialMs = userSelectedDate.getTime() - new Date().getTime();
-  updateTimerDisplay(initialMs);
+  return { days, hours, minutes, seconds };
+}
 
-  // Start countdown
-  timerInterval = setInterval(() => {
-    const remainingMs = userSelectedDate.getTime() - new Date().getTime();
+function setTime() {
+  btn.disabled = true;
+  input.disabled = true;
+  const timerId = setInterval(() => {
+    let delta = userSelectedDate - Date.now();
 
-    if (remainingMs <= 0) {
-      clearInterval(timerInterval);
-      updateTimerDisplay(0);
-      datetimePickerInput.disabled = false;
+    if (delta <= 0) {
+      clearInterval(timerId);
+      input.disabled = false;
+      values.forEach(value => {
+        value.textContent = '00';
+      });
       return;
     }
-
-    updateTimerDisplay(remainingMs);
+    const time = convertMs(delta);
+    days.textContent = addLeadingZero(time.days);
+    hours.textContent = addLeadingZero(time.hours);
+    minutes.textContent = addLeadingZero(time.minutes);
+    seconds.textContent = addLeadingZero(time.seconds);
   }, 1000);
-});
+}
+
+function addLeadingZero(value) {
+  return String(value).padStart(2, 0);
+}

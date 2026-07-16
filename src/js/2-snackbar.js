@@ -1,46 +1,62 @@
+'use strict';
+
 import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
 
-// Get form element
-const form = document.querySelector('.form');
+const delay = document.querySelector('input[type="number"]'),
+  form = document.querySelector('.form');
 
-// Helper function to create a promise
-function createPromise(delay, state) {
-  return new Promise((resolve, reject) => {
+form.addEventListener('submit', submitForm);
+
+function submitForm(e) {
+  e.preventDefault();
+
+  const radioValue = form.elements.state.value;
+  console.log(radioValue);
+
+  const value = delay.value;
+
+  const promise = new Promise((resolve, reject) => {
     setTimeout(() => {
-      if (state === 'fulfilled') {
-        resolve(delay);
+      if (radioValue === 'fulfilled') {
+        resolve(value);
       } else {
-        reject(delay);
+        reject(value);
       }
-    }, delay);
+    }, value);
   });
-}
 
-// Form submit handler
-form.addEventListener('submit', event => {
-  event.preventDefault();
-
-  // Get form data
-  const formData = new FormData(form);
-  const delay = Number(formData.get('delay'));
-  const state = formData.get('state');
-
-  // Create and handle promise
-  createPromise(delay, state)
-    .then(value => {
-      iziToast.success({
-        title: 'Success',
+  promise
+    .then(value =>
+      iziToast.show({
+        title: 'OK',
+        titleColor: '#fff',
+        titleSize: '16px',
+        titleLineHeight: '1.5',
         message: `✅ Fulfilled promise in ${value}ms`,
-      });
-    })
-    .catch(value => {
-      iziToast.error({
+        messageColor: '#fff',
+        messageSize: '16px',
+        messageLineHeight: '1.5',
+        backgroundColor: '#59a10d',
+        position: 'topRight',
+        theme: 'dark',
+      })
+    )
+    .catch(error =>
+      iziToast.show({
         title: 'Error',
+        titleColor: '#fff',
+        titleSize: '16px',
+        titleLineHeight: '1.5',
         message: `❌ Rejected promise in ${value}ms`,
-      });
-    });
+        messageColor: '#fff',
+        messageSize: '16px',
+        messageLineHeight: '1.5',
+        backgroundColor: '#ef4040',
+        position: 'topRight',
+        theme: 'dark',
+      })
+    );
 
-  // Reset form
   form.reset();
-});
+}
